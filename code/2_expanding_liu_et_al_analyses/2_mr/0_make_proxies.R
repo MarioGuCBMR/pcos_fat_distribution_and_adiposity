@@ -17,7 +17,7 @@ library(tidyverse)
 
 #Let's get a path where the clusters are so that we can loop throught them:
 
-setwd("/projects/kilpelainen-AUDIT/people/zlc436/PCOS_2026")
+setwd("your_path")
 
 bmi <- fread("output/1_curated_data/bmi_female_ivs.txt") #278
 whr <- fread("output/1_curated_data/whr_female_ivs.txt") #196
