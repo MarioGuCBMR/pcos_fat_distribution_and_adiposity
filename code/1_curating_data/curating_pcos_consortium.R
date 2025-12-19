@@ -21,7 +21,7 @@ library(rtracklayer)
 
 #We are gonna load the pcos_day from 2024. 
 
-setwd("/projects/kilpelainen-AUDIT/people/zlc436/PCOS_2026")
+setwd("your_path")
 
 pcos=fread("raw_data/summary_stats_release_finngen_R12_E4_PCOS_CONCORTIUM.gz")
 
