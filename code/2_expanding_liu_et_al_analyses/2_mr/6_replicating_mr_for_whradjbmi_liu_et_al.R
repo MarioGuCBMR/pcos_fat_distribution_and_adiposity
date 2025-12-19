@@ -137,7 +137,7 @@ compute_strict_het <- function(dat_1_filt_1){
 
 #Set pathway to find data:
 
-path_2_input <- "N:/SUN-CBMR-Kilpelainen-Group/Mario_Tools/PCOS_2026"
+path_2_input <- "your_path"
 
 setwd(path_2_input)
 
@@ -857,4 +857,5 @@ ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whradjb
 saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whradjbmi/age_and_bmi_adjusted/mr_res_after_outlier_extraction.RDS")
 saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whradjbmi/age_and_bmi_adjusted/sensitivity_test_after_outlier_extraction.RDS")
 saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whradjbmi/age_and_bmi_adjusted/strict_het_test_after_outlier_extraction.RDS")
+
 
