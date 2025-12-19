@@ -19,7 +19,7 @@ library(tidyverse)
 
 #We are gonna load the pcos_day from 2024. 
 
-setwd("/projects/kilpelainen-AUDIT/people/zlc436/PCOS_2026")
+setwd("your_path")
 
 pcos_day <- fread("raw_data/PCOS/PCOS_summary_data_19092018.txt") 
 
