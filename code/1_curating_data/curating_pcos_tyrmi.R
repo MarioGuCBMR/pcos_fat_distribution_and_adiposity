@@ -19,7 +19,7 @@ library(tidyverse)
 
 #We are gonna load the pcos_adj_age from 2024. 
 
-setwd("/projects/kilpelainen-AUDIT/people/zlc436/PCOS_2026")
+setwd("your_path")
 
 pcos_adj_age <- fread("raw_data/GCST90044902_buildGRCh37.tsv") #https://www.ebi.ac.uk/gwas/efotraits/EFO_0004703
 
