@@ -16,7 +16,7 @@ library(TwoSampleMR)
 #Loading functions#
 ###################
 
-source("/projects/kilpelainen-AUDIT/people/zlc436/PCOS_2026/code/0_functions/functions_4_mediation.R")
+source("your_path/code/0_functions/functions_4_mediation.R")
 
 chr_cleaner <- function(chr_pos){
   
