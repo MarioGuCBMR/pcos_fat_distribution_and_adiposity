@@ -95,7 +95,7 @@ curated_2_binary <- function(curated_df){
 
 #Running LDSC:
 
-path_2_input <- "/projects/kilpelainen-AUDIT/people/zlc436/PCOS_2026/"
+path_2_input <- "your_path/"
 
 setwd(path_2_input)
 
