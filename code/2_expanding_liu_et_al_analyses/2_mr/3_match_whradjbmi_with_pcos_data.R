@@ -16,7 +16,7 @@ library(TwoSampleMR)
 #Loading functions#
 ###################
 
-source("/projects/kilpelainen-AUDIT/people/zlc436/PCOS_2026/code/0_functions/functions_4_mediation.R")
+source("/your_path/code/0_functions/functions_4_mediation.R")
 
 chr_cleaner <- function(chr_pos){
   
@@ -228,7 +228,7 @@ recursively_matching_data <- function(exp_df, list_of_phenos_, trait_names_, out
 
 #Let's get a path where the clusters are so that we can loop throught them:
 
-path_2_input <- "/projects/kilpelainen-AUDIT/people/zlc436/PCOS_2026/"
+path_2_input <- "your_path"
 
 setwd(path_2_input)
 
