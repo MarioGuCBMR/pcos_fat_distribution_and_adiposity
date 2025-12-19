@@ -23,7 +23,7 @@ library(tidyverse)
 #Loading data#
 ##############
 
-setwd("/projects/kilpelainen-AUDIT/people/zlc436/PCOS_2026/")
+setwd("your_path/")
 
 bmi_ivs = as.data.frame(read_xlsx("raw_data/12916_2022_2238_MOESM1_ESM.xlsx", sheet = 1)) #284
 whr_ivs = as.data.frame(read_xlsx("raw_data/12916_2022_2238_MOESM1_ESM.xlsx", sheet = 2)) #206
