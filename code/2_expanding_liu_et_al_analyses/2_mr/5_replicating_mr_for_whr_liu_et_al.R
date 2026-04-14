@@ -137,7 +137,7 @@ compute_strict_het <- function(dat_1_filt_1){
 
 #Set pathway to find data:
 
-path_2_input <- "your_path"
+path_2_input <- "N:/SUN-CBMR-Kilpelainen-Group/Mario_Tools/PCOS_2026"
 
 setwd(path_2_input)
 
@@ -149,6 +149,13 @@ liu_pcos_consortium <- fread("output/2_replicating_liu_et_al/2_mr/1_expo_outcome
 liu_pcos_meta_analysis <- fread("output/2_replicating_liu_et_al/2_mr/1_expo_outcome_df/whr_liu_PCOS (Day et al).txt")
 liu_pcos_adj_age <- fread("output/2_replicating_liu_et_al/2_mr/1_expo_outcome_df/whr_liu_PCOS (adj age).txt")
 liu_pcos_adj_age_bmi <- fread("output/2_replicating_liu_et_al/2_mr/1_expo_outcome_df/whr_liu_PCOS (adj age+BMI).txt")
+liu_pcos_venkatesh <- fread("output/2_replicating_liu_et_al/2_mr/1_expo_outcome_df/whr_liu_PCOS (Venkatesh et al).txt")
+
+liu_amenorrhea<- fread("output/2_replicating_liu_et_al/2_mr/1_expo_outcome_df/whr_liu_Amenorrhea.txt")
+liu_oligomenorrhea<- fread("output/2_replicating_liu_et_al/2_mr/1_expo_outcome_df/whr_liu_Oligomenorrhea.txt")
+liu_menorrhagia<- fread("output/2_replicating_liu_et_al/2_mr/1_expo_outcome_df/whr_liu_Menorrhagia.txt")
+liu_anovulation<- fread("output/2_replicating_liu_et_al/2_mr/1_expo_outcome_df/whr_liu_Anovulation.txt")
+liu_hirsutism<- fread("output/2_replicating_liu_et_al/2_mr/1_expo_outcome_df/whr_liu_Hirsutism.txt")
 
 ##############################################################
 #STEP 2: let's first rerun the analyses for the meta-analysis#
@@ -958,4 +965,783 @@ saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/age_and_bmi_adjus
 saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/age_and_bmi_adjusted/sensitivity_test_after_outlier_extraction.RDS")
 saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/age_and_bmi_adjusted/strict_het_test_after_outlier_extraction.RDS")
 
+###############################################################
+#Let's first analyse the data for the whole set for bmi - PCOS# Venkatesh
+###############################################################
 
+#STEP 1: let's use only those that have F>10
+
+mr_df <- liu_pcos_venkatesh[which(((liu_pcos_venkatesh$beta.exposure^2)/(liu_pcos_venkatesh$se.exposure^2)) > 10),] #194
+
+#STEP 2: let's compute MR steiger:
+
+mr_df$r.exposure <- TwoSampleMR::get_r_from_pn(
+  p = mr_df$pval.exposure,n = mr_df$samplesize.exposure)
+
+mr_df$r.outcome <- TwoSampleMR::get_r_from_lor(
+  lor = mr_df$beta.outcome,
+  af = mr_df$eaf.outcome,
+  ncase = mr_df$ncase.outcome,
+  ncontrol = mr_df$ncontrol.outcome,
+  prevalence = mr_df$prevalence.outcome[1] 
+)
+
+mr_steiger_df <- TwoSampleMR::steiger_filtering(mr_df)
+mr_steiger_df <- mr_steiger_df[which(mr_steiger_df$steiger_dir == TRUE),]
+mr_steiger_df$mr_keep <- TRUE
+
+#Let's save the data:
+
+dir.create("output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh")
+
+saveRDS(mr_steiger_df, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh/instruments_after_steiger_df.RDS")
+
+#STEP 4: let's run the analyses:
+
+mr_res <- TwoSampleMR::mr(mr_steiger_df)
+
+# id.exposure id.outcome outcome exposure                    method nsnp         b        se         pval
+# 1    exposure    outcome outcome exposure                  MR Egger  196 0.5128677 0.2456733 0.0381398582
+# 2    exposure    outcome outcome exposure           Weighted median  196 0.4849042 0.1754168 0.0057045480
+# 3    exposure    outcome outcome exposure Inverse variance weighted  196 0.4140557 0.1062803 0.0000978415
+# 4    exposure    outcome outcome exposure               Simple mode  196 0.4625879 0.3110727 0.1386105937
+# 5    exposure    outcome outcome exposure             Weighted mode  196 0.4267917 0.2112394 0.0447080602
+
+#Let's check the plot:
+
+rucker <- TwoSampleMR::mr_rucker(mr_steiger_df)
+
+# [[1]]$intercept
+# Method     Estimate          SE      CI_low      CI_upp         P
+# 1  Egger fixed effects -0.002707809 0.005255069 -0.01300755 0.007591937 0.6063605
+# 2 Egger random effects -0.002707809 0.006066880 -0.01459867 0.009183057 0.6723192
+# 
+# [[1]]$Q
+# Method           Q  df           P
+# 1   Q_ivw 258.8340760 195 0.001500521
+# 2 Q_egger 258.5685671 194 0.001328602
+# 3  Q_diff   0.2655089   1 0.606360462
+# 
+# [[1]]$res
+# [1] "B"
+
+#Here there is heterogeneity and pleitropy
+
+strict_het <- compute_strict_het(mr_steiger_df) #they disagree, but still
+
+#That is quite good:
+
+mr_steiger_df$labels <- NA
+mr_steiger_df$units.exposure <- "SD"
+mr_steiger_df$units.outcome <- "LOR"
+
+plotio=mr_plots(mr_steiger_df)
+ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh/plots_before_outlier_extraction.svg", height=16, width=16, units="in")
+
+saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh/mr_res_before_outlier_extraction.RDS")
+saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh/sensitivity_test_before_outlier_extraction.RDS")
+saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh/strict_het_test_before_outlier_extraction.RDS")
+
+#Quite the heterogeneity!
+
+mr_post <- remove_outlier(mr_steiger_df, rucker)
+
+saveRDS(mr_post, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh/instruments_after_outlier_removal_df.RDS")
+
+#STEP 6: let's run the results for real now:
+
+mr_res <- TwoSampleMR::mr(mr_post)
+
+# id.exposure id.outcome outcome exposure                    method nsnp         b         se        pval
+# 1    exposure    outcome outcome exposure                  MR Egger  182 0.3850080 0.21755072 0.078463714
+# 2    exposure    outcome outcome exposure           Weighted median  182 0.4687462 0.17700812 0.008093063
+# 3    exposure    outcome outcome exposure Inverse variance weighted  182 0.3182588 0.09863094 0.001251985
+# 4    exposure    outcome outcome exposure               Simple mode  182 0.4537847 0.30790687 0.142279873
+# 5    exposure    outcome outcome exposure             Weighted mode  182 0.4537847 0.19299455 0.019784703
+
+# #Let's check the plot:
+#  
+rucker <- TwoSampleMR::mr_rucker(mr_post)
+
+# [[1]]$intercept
+# Method     Estimate         SE      CI_low      CI_upp         P
+# 1  Egger fixed effects -0.001876149 0.00481659 -0.01131649 0.007564194 0.6968929
+# 2 Egger random effects -0.001876149 0.00481659 -0.01131649 0.007564194 0.6515535
+# 
+# [[1]]$Q
+# Method           Q  df         P
+# 1   Q_ivw 140.6969867 181 0.9882127
+# 2 Q_egger 140.5784913 180 0.9866701
+# 3  Q_diff   0.1184955   1 0.7306720
+# 
+# [[1]]$res
+# [1] "A"
+
+# #Here there is heterogeneity and pleitropy
+
+strict_het <- compute_strict_het(mr_post) #they disagree, but still
+
+#That is quite good:
+
+mr_post$labels <- NA
+mr_post$units.exposure <- "SD"
+mr_post$units.outcome <- "LOR"
+
+plotio=mr_plots(mr_post)
+ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh/plots_after_outlier_extraction.svg", height=16, width=16, units="in")
+
+saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh/mr_res_after_outlier_extraction.RDS")
+saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh/sensitivity_test_after_outlier_extraction.RDS")
+saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/venkatesh/strict_het_test_after_outlier_extraction.RDS")
+
+######################
+#Let's try amenorrhea#
+######################
+
+#STEP 1: let's use only those that have F>10
+
+mr_df <- liu_amenorrhea[which(((liu_amenorrhea$beta.exposure^2)/(liu_amenorrhea$se.exposure^2)) > 10),] #278
+
+#STEP 2: let's compute MR steiger:
+
+mr_df$r.exposure <- TwoSampleMR::get_r_from_pn(
+  p = mr_df$pval.exposure,n = mr_df$samplesize.exposure)
+
+mr_df$r.outcome <- TwoSampleMR::get_r_from_lor(
+  lor = mr_df$beta.outcome,
+  af = mr_df$eaf.outcome,
+  ncase = mr_df$ncase.outcome,
+  ncontrol = mr_df$ncontrol.outcome,
+  prevalence = mr_df$prevalence.outcome[1] 
+)
+
+mr_steiger_df <- TwoSampleMR::steiger_filtering(mr_df)
+mr_steiger_df <- mr_steiger_df[which(mr_steiger_df$steiger_dir == TRUE),]
+mr_steiger_df$mr_keep <- TRUE
+
+#Let's save the data:
+
+dir.create("output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea")
+
+saveRDS(mr_steiger_df, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea/instruments_after_steiger_df.RDS")
+
+#STEP 4: let's run the analyses:
+
+mr_res <- TwoSampleMR::mr(mr_steiger_df)
+
+# id.exposure id.outcome outcome exposure                    method nsnp          b         se       pval
+# 1    exposure    outcome outcome exposure                  MR Egger  194 0.49474723 0.22104839 0.02635764
+# 2    exposure    outcome outcome exposure           Weighted median  194 0.10522096 0.17027758 0.53661631
+# 3    exposure    outcome outcome exposure Inverse variance weighted  194 0.01203904 0.09400941 0.89809988
+# 4    exposure    outcome outcome exposure               Simple mode  194 0.47459352 0.36984035 0.20094712
+# 5    exposure    outcome outcome exposure             Weighted mode  194 0.31869063 0.21720401 0.14393815
+
+#Let's check the plot:
+
+rucker <- TwoSampleMR::mr_rucker(mr_steiger_df)
+
+# [[1]]$intercept
+# Method    Estimate          SE      CI_low       CI_upp          P
+# 1  Egger fixed effects -0.01248858 0.005046045 -0.02237864 -0.002598510 0.01332646
+# 2 Egger random effects -0.01248858 0.005189794 -0.02266039 -0.002316767 0.99194408
+# 
+# [[1]]$Q
+# Method          Q  df          P
+# 1   Q_ivw 209.220249 193 0.20122835
+# 2 Q_egger 203.095002 192 0.27776119
+# 3  Q_diff   6.125248   1 0.01332646
+# 
+# [[1]]$res
+# [1] "A"
+
+#Here there is heterogeneity and pleitropy
+
+strict_het <- compute_strict_het(mr_steiger_df) #they disagree, but still
+
+#That is quite good:
+
+mr_steiger_df$labels <- NA
+mr_steiger_df$units.exposure <- "SD"
+mr_steiger_df$units.outcome <- "LOR"
+
+plotio=mr_plots(mr_steiger_df)
+ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea/plots_before_outlier_extraction.svg", height=16, width=16, units="in")
+
+saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea/mr_res_before_outlier_extraction.RDS")
+saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea/sensitivity_test_before_outlier_extraction.RDS")
+saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea/strict_het_test_before_outlier_extraction.RDS")
+
+#Pleiotropy! Let's remove the outliers
+ 
+mr_post <- remove_outlier(mr_steiger_df, rucker)
+ 
+saveRDS(mr_post, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea/instruments_after_outlier_removal_df.RDS")
+ 
+#STEP 6: let's run the results for real now:
+ 
+mr_res <- TwoSampleMR::mr(mr_post)
+ 
+# id.exposure id.outcome outcome exposure                    method nsnp            b         se      pval
+# 1    exposure    outcome outcome exposure                  MR Egger  180  0.347208145 0.22291614 0.1211107
+# 2    exposure    outcome outcome exposure           Weighted median  180  0.059938027 0.17200999 0.7274973
+# 3    exposure    outcome outcome exposure Inverse variance weighted  180 -0.006302846 0.09408723 0.9465902
+# 4    exposure    outcome outcome exposure               Simple mode  180  0.483134024 0.38585786 0.2121657
+# 5    exposure    outcome outcome exposure             Weighted mode  180  0.300950228 0.23553442 0.2029980
+
+#Let's check the plot:
+  
+rucker <- TwoSampleMR::mr_rucker(mr_post)
+ 
+# [[1]]$intercept
+# Method     Estimate          SE      CI_low        CI_upp          P
+# 1  Egger fixed effects -0.009111712 0.004391308 -0.01771852 -0.0005049066 0.03799185
+# 2 Egger random effects -0.009111712 0.004391308 -0.01771852 -0.0005049066 0.98100407
+# 
+# [[1]]$Q
+# Method          Q  df          P
+# 1   Q_ivw 129.573427 179 0.99791333
+# 2 Q_egger 126.513376 178 0.99870014
+# 3  Q_diff   3.060051   1 0.08023916
+# 
+# [[1]]$res
+# [1] "A"
+ 
+# #Here there is heterogeneity and pleitropy
+ 
+strict_het <- compute_strict_het(mr_post) #they disagree, but still
+ 
+#That is quite good:
+ 
+mr_post$labels <- NA
+mr_post$units.exposure <- "SD"
+mr_post$units.outcome <- "LOR"
+ 
+plotio=mr_plots(mr_post)
+ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea/plots_after_outlier_extraction.svg", height=16, width=16, units="in")
+ 
+saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea/mr_res_after_outlier_extraction.RDS")
+saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea/sensitivity_test_after_outlier_extraction.RDS")
+saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/amenorrhea/strict_het_test_after_outlier_extraction.RDS")
+
+##########################
+#Let's try oligomenorrhea#
+##########################
+
+#STEP 1: let's use only those that have F>10
+
+mr_df <- liu_oligomenorrhea[which(((liu_oligomenorrhea$beta.exposure^2)/(liu_oligomenorrhea$se.exposure^2)) > 10),] #276
+
+#STEP 2: let's compute MR steiger:
+
+mr_df$r.exposure <- TwoSampleMR::get_r_from_pn(
+  p = mr_df$pval.exposure,n = mr_df$samplesize.exposure)
+
+mr_df$r.outcome <- TwoSampleMR::get_r_from_lor(
+  lor = mr_df$beta.outcome,
+  af = mr_df$eaf.outcome,
+  ncase = mr_df$ncase.outcome,
+  ncontrol = mr_df$ncontrol.outcome,
+  prevalence = mr_df$prevalence.outcome[1] 
+)
+
+mr_steiger_df <- TwoSampleMR::steiger_filtering(mr_df)
+mr_steiger_df <- mr_steiger_df[which(mr_steiger_df$steiger_dir == TRUE),]
+mr_steiger_df$mr_keep <- TRUE
+
+#Let's save the data:
+
+dir.create("output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea")
+
+saveRDS(mr_steiger_df, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea/instruments_after_steiger_df.RDS")
+
+#STEP 4: let's run the analyses:
+
+mr_res <- TwoSampleMR::mr(mr_steiger_df)
+
+# id.exposure id.outcome outcome exposure                    method nsnp         b        se        pval
+# 1    exposure    outcome outcome exposure                  MR Egger  194 0.7973695 0.3133257 0.011718591
+# 2    exposure    outcome outcome exposure           Weighted median  194 0.6032181 0.2096101 0.004004468
+# 3    exposure    outcome outcome exposure Inverse variance weighted  194 0.3622943 0.1314876 0.005862943
+# 4    exposure    outcome outcome exposure               Simple mode  194 0.7235030 0.5024013 0.151462165
+# 5    exposure    outcome outcome exposure             Weighted mode  194 0.7823771 0.3054404 0.011186589
+
+#Let's check the plot:
+
+rucker <- TwoSampleMR::mr_rucker(mr_steiger_df)
+
+# [[1]]$intercept
+# Method    Estimate          SE      CI_low     CI_upp         P
+# 1  Egger fixed effects -0.01125042 0.007035623 -0.02503999 0.00253915 0.1098062
+# 2 Egger random effects -0.01125042 0.007035623 -0.02503999 0.00253915 0.9450969
+# 
+# [[1]]$Q
+# Method          Q  df         P
+# 1   Q_ivw 178.065923 193 0.7723176
+# 2 Q_egger 175.725652 192 0.7941539
+# 3  Q_diff   2.340271   1 0.1260676
+# 
+# [[1]]$res
+# [1] "A"
+
+#Here there is heterogeneity and pleitropy
+
+strict_het <- compute_strict_het(mr_steiger_df) #they disagree, but still
+
+#That is quite good:
+
+mr_steiger_df$labels <- NA
+mr_steiger_df$units.exposure <- "SD"
+mr_steiger_df$units.outcome <- "LOR"
+
+plotio=mr_plots(mr_steiger_df)
+ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea/plots_before_outlier_extraction.svg", height=16, width=16, units="in")
+
+saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea/mr_res_before_outlier_extraction.RDS")
+saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea/sensitivity_test_before_outlier_extraction.RDS")
+saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea/strict_het_test_before_outlier_extraction.RDS")
+
+#Very controlled..., let's run it just in case - I can see some stuff...
+
+mr_post <- remove_outlier(mr_steiger_df, rucker) #removing outliers removes variants and makes it pleiotropic!!! We are not doing it.
+#mr_post <- remove_outlier(mr_post, rucker) #Run twice
+#mr_post <- remove_outlier(mr_post, rucker) #does not run. the best we can do honestly
+
+# saveRDS(mr_post, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea/instruments_after_outlier_removal_df.RDS")
+# 
+# #STEP 6: let's run the results for real now:
+# 
+# mr_res <- TwoSampleMR::mr(mr_post)
+# 
+# # id.exposure id.outcome outcome exposure                    method nsnp         b        se        pval
+# # 1    exposure    outcome outcome exposure                  MR Egger  183 0.9303201 0.3188638 0.003974389
+# # 2    exposure    outcome outcome exposure           Weighted median  183 0.6267944 0.2088986 0.002695614
+# # 3    exposure    outcome outcome exposure Inverse variance weighted  183 0.4170915 0.1356865 0.002112553
+# # 4    exposure    outcome outcome exposure               Simple mode  183 0.7441177 0.4834139 0.125468525
+# # 5    exposure    outcome outcome exposure             Weighted mode  183 0.8156315 0.3287275 0.014002305
+# 
+# #Let's check the plot:
+# #  
+# rucker <- TwoSampleMR::mr_rucker(mr_post)
+# 
+# # [[1]]$intercept
+# # Method    Estimate          SE      CI_low        CI_upp          P
+# # 1  Egger fixed effects -0.01248619 0.006093084 -0.02442842 -0.0005439683 0.04043862
+# # 2 Egger random effects -0.01248619 0.006093084 -0.02442842 -0.0005439683 0.97978069
+# # 
+# # [[1]]$Q
+# # Method          Q  df          P
+# # 1   Q_ivw 174.837171 261 0.99998981
+# # 2 Q_egger 172.058177 260 0.99999391
+# # 3  Q_diff   2.778995   1 0.09550808
+# # 
+# # [[1]]$res
+# # [1] "A"
+# 
+# # #Here there is heterogeneity and pleitropy
+# 
+# strict_het <- compute_strict_het(mr_post) #they disagree, but still
+# 
+# #That is quite good:
+# 
+# mr_post$labels <- NA
+# mr_post$units.exposure <- "SD"
+# mr_post$units.outcome <- "LOR"
+# 
+# plotio=mr_plots(mr_post)
+# ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea/plots_after_outlier_extraction.svg", height=16, width=16, units="in")
+# 
+# saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea/mr_res_after_outlier_extraction.RDS")
+# saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea/sensitivity_test_after_outlier_extraction.RDS")
+# saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/oligomenorrhea/strict_het_test_after_outlier_extraction.RDS")
+
+#######################
+#Let's try menorrhagia#
+#######################
+
+#STEP 1: let's use only those that have F>10
+
+mr_df <- liu_menorrhagia[which(((liu_menorrhagia$beta.exposure^2)/(liu_menorrhagia$se.exposure^2)) > 10),] #276
+
+#STEP 2: let's compute MR steiger:
+
+mr_df$r.exposure <- TwoSampleMR::get_r_from_pn(
+  p = mr_df$pval.exposure,n = mr_df$samplesize.exposure)
+
+mr_df$r.outcome <- TwoSampleMR::get_r_from_lor(
+  lor = mr_df$beta.outcome,
+  af = mr_df$eaf.outcome,
+  ncase = mr_df$ncase.outcome,
+  ncontrol = mr_df$ncontrol.outcome,
+  prevalence = mr_df$prevalence.outcome[1] 
+)
+
+mr_steiger_df <- TwoSampleMR::steiger_filtering(mr_df)
+mr_steiger_df <- mr_steiger_df[which(mr_steiger_df$steiger_dir == TRUE),]
+mr_steiger_df$mr_keep <- TRUE
+
+#Let's save the data:
+
+dir.create("output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia")
+
+saveRDS(mr_steiger_df, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia/instruments_after_steiger_df.RDS")
+
+#STEP 4: let's run the analyses:
+
+mr_res <- TwoSampleMR::mr(mr_steiger_df)
+
+# id.exposure id.outcome outcome exposure                    method nsnp           b         se         pval
+# 1    exposure    outcome outcome exposure                  MR Egger  194  0.39154347 0.10598001 2.872245e-04
+# 2    exposure    outcome outcome exposure           Weighted median  194  0.22722877 0.05707733 6.860616e-05
+# 3    exposure    outcome outcome exposure Inverse variance weighted  194  0.18031093 0.04508883 6.360644e-05
+# 4    exposure    outcome outcome exposure               Simple mode  194 -0.02108491 0.19121609 9.123118e-01
+# 5    exposure    outcome outcome exposure             Weighted mode  194  0.32781843 0.09265327 5.048018e-04
+
+#Let's check the plot:
+
+rucker <- TwoSampleMR::mr_rucker(mr_steiger_df)
+
+# [[1]]$intercept
+# Method     Estimate          SE       CI_low        CI_upp           P
+# 1  Egger fixed effects -0.005472767 0.001855173 -0.009108839 -0.0018366952 0.003177698
+# 2 Egger random effects -0.005472767 0.002490248 -0.010353563 -0.0005919712 0.986014033
+# 
+# [[1]]$Q
+# Method          Q  df            P
+# 1   Q_ivw 354.655932 193 1.177653e-11
+# 2 Q_egger 345.953408 192 6.479301e-11
+# 3  Q_diff   8.702524   1 3.177698e-03
+# 
+# [[1]]$res
+# [1] "D"
+
+#Here there is heterogeneity and pleitropy
+
+strict_het <- compute_strict_het(mr_steiger_df) #they disagree, but still
+
+#That is quite good:
+
+mr_steiger_df$labels <- NA
+mr_steiger_df$units.exposure <- "SD"
+mr_steiger_df$units.outcome <- "LOR"
+
+plotio=mr_plots(mr_steiger_df)
+ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia/plots_before_outlier_extraction.svg", height=16, width=16, units="in")
+
+saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia/mr_res_before_outlier_extraction.RDS")
+saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia/sensitivity_test_before_outlier_extraction.RDS")
+saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia/strict_het_test_before_outlier_extraction.RDS")
+
+#Pleiotropy! Let's remove the outliers
+
+mr_post <- remove_outlier(mr_steiger_df, rucker) 
+#mr_post <- remove_outlier(mr_post, rucker) #run twice with updated rucker ofc, but no outliers are found...
+
+saveRDS(mr_post, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia/instruments_after_outlier_removal_df.RDS")
+
+#STEP 6: let's run the results for real now:
+
+mr_res <- TwoSampleMR::mr(mr_post)
+
+# id.exposure id.outcome outcome exposure                    method nsnp           b         se         pval
+# 1    exposure    outcome outcome exposure                  MR Egger  170  0.31550372 0.08371305 2.267294e-04
+# 2    exposure    outcome outcome exposure           Weighted median  170  0.22365875 0.06018399 2.022013e-04
+# 3    exposure    outcome outcome exposure Inverse variance weighted  170  0.17431993 0.03569570 1.042197e-06
+# 4    exposure    outcome outcome exposure               Simple mode  170 -0.04465857 0.18377914 8.082991e-01
+# 5    exposure    outcome outcome exposure             Weighted mode  170  0.33719486 0.09314363 3.888169e-04
+
+#Let's check the plot:
+#  
+rucker <- TwoSampleMR::mr_rucker(mr_post)
+
+# [[1]]$intercept
+# Method     Estimate          SE       CI_low       CI_upp         P
+# 1  Egger fixed effects -0.003641323 0.001882245 -0.007330456 4.781019e-05 0.0530439
+# 2 Egger random effects -0.003641323 0.001882245 -0.007330456 4.781019e-05 0.9734781
+# 
+# [[1]]$Q
+# Method          Q  df          P
+# 1   Q_ivw 159.531816 169 0.68740277
+# 2 Q_egger 156.055371 168 0.73602886
+# 3  Q_diff   3.476445   1 0.06224833
+# 
+# [[1]]$res
+# [1] "A"
+
+# #Here there is heterogeneity and pleitropy
+
+strict_het <- compute_strict_het(mr_post) #they disagree, but still
+
+#That is quite good:
+
+mr_post$labels <- NA
+mr_post$units.exposure <- "SD"
+mr_post$units.outcome <- "LOR"
+
+plotio=mr_plots(mr_post)
+ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia/plots_after_outlier_extraction.svg", height=16, width=16, units="in")
+
+saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia/mr_res_after_outlier_extraction.RDS")
+saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia/sensitivity_test_after_outlier_extraction.RDS")
+saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/menorrhagia/strict_het_test_after_outlier_extraction.RDS")
+
+#######################
+#Let's try anovulation#
+#######################
+
+#STEP 1: let's use only those that have F>10
+
+mr_df <- liu_anovulation[which(((liu_anovulation$beta.exposure^2)/(liu_anovulation$se.exposure^2)) > 10),] #276
+
+#STEP 2: let's compute MR steiger:
+
+mr_df$r.exposure <- TwoSampleMR::get_r_from_pn(
+  p = mr_df$pval.exposure,n = mr_df$samplesize.exposure)
+
+mr_df$r.outcome <- TwoSampleMR::get_r_from_lor(
+  lor = mr_df$beta.outcome,
+  af = mr_df$eaf.outcome,
+  ncase = mr_df$ncase.outcome,
+  ncontrol = mr_df$ncontrol.outcome,
+  prevalence = mr_df$prevalence.outcome[1] 
+)
+
+mr_steiger_df <- TwoSampleMR::steiger_filtering(mr_df)
+mr_steiger_df <- mr_steiger_df[which(mr_steiger_df$steiger_dir == TRUE),]
+mr_steiger_df$mr_keep <- TRUE
+
+#Let's save the data:
+
+dir.create("output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation")
+
+saveRDS(mr_steiger_df, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation/instruments_after_steiger_df.RDS")
+
+#STEP 4: let's run the analyses:
+
+mr_res <- TwoSampleMR::mr(mr_steiger_df)
+
+# id.exposure id.outcome outcome exposure                    method nsnp         b         se         pval
+# 1    exposure    outcome outcome exposure                  MR Egger  194 0.8425925 0.23329583 0.0003883017
+# 2    exposure    outcome outcome exposure           Weighted median  194 0.3784274 0.14749777 0.0102983176
+# 3    exposure    outcome outcome exposure Inverse variance weighted  194 0.2889640 0.09949459 0.0036805278
+# 4    exposure    outcome outcome exposure               Simple mode  194 0.1548898 0.43941312 0.7248536961
+# 5    exposure    outcome outcome exposure             Weighted mode  194 0.5361899 0.21515585 0.0135414804
+
+#Let's check the plot:
+
+rucker <- TwoSampleMR::mr_rucker(mr_steiger_df)
+
+# [[1]]$intercept
+# Method    Estimate          SE      CI_low       CI_upp           P
+# 1  Egger fixed effects -0.01432261 0.004713596 -0.02356108 -0.005084129 0.002377011
+# 2 Egger random effects -0.01432261 0.005476866 -0.02505707 -0.003588147 0.995540065
+# 
+# [[1]]$Q
+# Method          Q  df            P
+# 1   Q_ivw 268.448306 193 0.0002672082
+# 2 Q_egger 259.215377 192 0.0008772518
+# 3  Q_diff   9.232929   1 0.0023770112
+# 
+# [[1]]$res
+# [1] "D"
+
+#Here there is heterogeneity and pleitropy
+
+strict_het <- compute_strict_het(mr_steiger_df) #they disagree, but still
+
+#That is quite good:
+
+mr_steiger_df$labels <- NA
+mr_steiger_df$units.exposure <- "SD"
+mr_steiger_df$units.outcome <- "LOR"
+
+plotio=mr_plots(mr_steiger_df)
+ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation/plots_before_outlier_extraction.svg", height=16, width=16, units="in")
+
+saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation/mr_res_before_outlier_extraction.RDS")
+saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation/sensitivity_test_before_outlier_extraction.RDS")
+saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation/strict_het_test_before_outlier_extraction.RDS")
+
+#BMI is not linked to anovulation
+
+mr_post <- remove_outlier(mr_steiger_df, rucker) 
+#mr_post <- remove_outlier(mr_post, rucker) #run twice with updated rucker ofc, but no outliers are found...
+ 
+saveRDS(mr_post, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation/instruments_after_outlier_removal_df.RDS")
+ 
+#STEP 6: let's run the results for real now:
+ 
+mr_res <- TwoSampleMR::mr(mr_post)
+ 
+# id.exposure id.outcome outcome exposure                    method nsnp         b        se         pval
+# 1    exposure    outcome outcome exposure                  MR Egger  175 0.7352752 0.2089461 0.0005536403
+# 2    exposure    outcome outcome exposure           Weighted median  175 0.3300277 0.1445203 0.0223945873
+# 3    exposure    outcome outcome exposure Inverse variance weighted  175 0.2029107 0.0891567 0.0228526749
+# 4    exposure    outcome outcome exposure               Simple mode  175 0.1703723 0.3738374 0.6491459145
+# 5    exposure    outcome outcome exposure             Weighted mode  175 0.5352923 0.2226570 0.0172617652
+
+#Let's check the plot:
+  
+rucker <- TwoSampleMR::mr_rucker(mr_post)
+
+# [[1]]$intercept
+# Method   Estimate          SE      CI_low       CI_upp           P
+# 1  Egger fixed effects -0.0138082 0.004424322 -0.02247971 -0.005136686 0.001802534
+# 2 Egger random effects -0.0138082 0.004424322 -0.02247971 -0.005136686 0.999098733
+# 
+# [[1]]$Q
+# Method          Q  df           P
+# 1   Q_ivw 148.897696 174 0.916237011
+# 2 Q_egger 140.961110 173 0.964503559
+# 3  Q_diff   7.936586   1 0.004844514
+# 
+# [[1]]$res
+# [1] "A"
+
+ 
+# #Here there is heterogeneity and pleitropy
+ 
+strict_het <- compute_strict_het(mr_post) #they disagree, but still
+ 
+#That is quite good:
+ 
+mr_post$labels <- NA
+mr_post$units.exposure <- "SD"
+mr_post$units.outcome <- "LOR"
+ 
+plotio=mr_plots(mr_post)
+ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation/plots_after_outlier_extraction.svg", height=16, width=16, units="in")
+ 
+saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation/mr_res_after_outlier_extraction.RDS")
+saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation/sensitivity_test_after_outlier_extraction.RDS")
+saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/anovulation/strict_het_test_after_outlier_extraction.RDS")
+
+#####################
+#Let's try hirsutism#
+#####################
+
+#STEP 1: let's use only those that have F>10
+
+mr_df <- liu_hirsutism[which(((liu_hirsutism$beta.exposure^2)/(liu_hirsutism$se.exposure^2)) > 10),] #276
+
+#STEP 2: let's compute MR steiger:
+
+mr_df$r.exposure <- TwoSampleMR::get_r_from_pn(
+  p = mr_df$pval.exposure,n = mr_df$samplesize.exposure)
+
+mr_df$r.outcome <- TwoSampleMR::get_r_from_lor(
+  lor = mr_df$beta.outcome,
+  af = mr_df$eaf.outcome,
+  ncase = mr_df$ncase.outcome,
+  ncontrol = mr_df$ncontrol.outcome,
+  prevalence = mr_df$prevalence.outcome[1] 
+)
+
+mr_steiger_df <- TwoSampleMR::steiger_filtering(mr_df)
+mr_steiger_df <- mr_steiger_df[which(mr_steiger_df$steiger_dir == TRUE),]
+mr_steiger_df$mr_keep <- TRUE
+
+#Let's save the data:
+
+dir.create("output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism")
+
+saveRDS(mr_steiger_df, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism/instruments_after_steiger_df.RDS")
+
+#STEP 4: let's run the analyses:
+
+mr_res <- TwoSampleMR::mr(mr_steiger_df)
+
+# id.exposure id.outcome outcome exposure                    method nsnp         b        se         pval
+# 1    exposure    outcome outcome exposure                  MR Egger  194 0.4680765 0.4727086 0.3233220861
+# 2    exposure    outcome outcome exposure           Weighted median  194 0.7484299 0.3758769 0.0464636497
+# 3    exposure    outcome outcome exposure Inverse variance weighted  194 0.7430471 0.1979824 0.0001746631
+# 4    exposure    outcome outcome exposure               Simple mode  194 0.3326228 0.7435195 0.6551149624
+# 5    exposure    outcome outcome exposure             Weighted mode  194 0.6777709 0.5224158 0.1960496939
+
+#Let's check the plot:
+
+rucker <- TwoSampleMR::mr_rucker(mr_steiger_df)
+
+# [[1]]$intercept
+# Method   Estimate         SE      CI_low     CI_upp         P
+# 1  Egger fixed effects 0.00710801 0.01081485 -0.01408871 0.02830473 0.5110232
+# 2 Egger random effects 0.00710801 0.01109255 -0.01463300 0.02884902 0.2608292
+# 
+# [[1]]$Q
+# Method           Q  df         P
+# 1   Q_ivw 202.4188197 193 0.3065595
+# 2 Q_egger 201.9868484 192 0.2963436
+# 3  Q_diff   0.4319713   1 0.5110232
+# 
+# [[1]]$res
+# [1] "A"
+
+#Here there is heterogeneity and pleitropy
+
+strict_het <- compute_strict_het(mr_steiger_df) #they disagree, but still
+
+#That is quite good:
+
+mr_steiger_df$labels <- NA
+mr_steiger_df$units.exposure <- "SD"
+mr_steiger_df$units.outcome <- "LOR"
+
+plotio=mr_plots(mr_steiger_df)
+ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism/plots_before_outlier_extraction.svg", height=16, width=16, units="in")
+
+saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism/mr_res_before_outlier_extraction.RDS")
+saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism/sensitivity_test_before_outlier_extraction.RDS")
+saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism/strict_het_test_before_outlier_extraction.RDS")
+
+#Quite good actually, we do not need anything else
+
+# mr_post <- remove_outlier(mr_steiger_df, rucker) 
+# #mr_post <- remove_outlier(mr_post, rucker) #run twice with updated rucker ofc, but no outliers are found...
+# 
+# saveRDS(mr_post, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism/instruments_after_outlier_removal_df.RDS")
+# 
+# #STEP 6: let's run the results for real now:
+# 
+# mr_res <- TwoSampleMR::mr(mr_post)
+# 
+# # id.exposure id.outcome outcome exposure                    method nsnp         b         se         pval
+# # 1    exposure    outcome outcome exposure                  MR Egger  244 0.0195787 0.09640408 8.392354e-01
+# # 2    exposure    outcome outcome exposure           Weighted median  244 0.1780444 0.05638549 1.590584e-03
+# # 3    exposure    outcome outcome exposure Inverse variance weighted  244 0.2231649 0.03436266 8.336465e-11
+# # 4    exposure    outcome outcome exposure               Simple mode  244 0.3047140 0.16828207 7.141711e-02
+# # 5    exposure    outcome outcome exposure             Weighted mode  244 0.1927115 0.10166373 5.920252e-02
+# 
+# #Let's check the plot:
+# #  
+# rucker <- TwoSampleMR::mr_rucker(mr_post)
+# 
+# # [[1]]$intercept
+# # Method    Estimate          SE       CI_low     CI_upp           P
+# # 1  Egger fixed effects 0.004384173 0.001844563 0.0007688961 0.00799945 0.017463149
+# # 2 Egger random effects 0.004384173 0.001844563 0.0007688961 0.00799945 0.008731575
+# # 
+# # [[1]]$Q
+# # Method          Q  df          P
+# # 1   Q_ivw 223.957769 243 0.80427150
+# # 2 Q_egger 218.848984 242 0.85481831
+# # 3  Q_diff   5.108784   1 0.02380499
+# # 
+# # [[1]]$res
+# # [1] "A"
+# 
+# # #Here there is heterogeneity and pleitropy
+# 
+# strict_het <- compute_strict_het(mr_post) #they disagree, but still
+# 
+# #That is quite good:
+# 
+# mr_post$labels <- NA
+# mr_post$units.exposure <- "SD"
+# mr_post$units.outcome <- "LOR"
+# 
+# plotio=mr_plots(mr_post)
+# ggsave(plot=plotio,filename = "output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism/plots_after_outlier_extraction.svg", height=16, width=16, units="in")
+# 
+# saveRDS(mr_res, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism/mr_res_after_outlier_extraction.RDS")
+# saveRDS(rucker, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism/sensitivity_test_after_outlier_extraction.RDS")
+# saveRDS(strict_het, "output/2_replicating_liu_et_al//2_mr/2_mr/whr/hirsutism/strict_het_test_after_outlier_extraction.RDS")
+# 

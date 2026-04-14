@@ -16,7 +16,7 @@ library(TwoSampleMR)
 #Loading functions#
 ###################
 
-source("your_path/code/0_functions/functions_4_mediation.R")
+source("N:/SUN-CBMR-Kilpelainen-Group/Mario_Tools/PCOS_2026/code/0_functions/functions_4_mediation.R")
 
 chr_cleaner <- function(chr_pos){
   
@@ -228,7 +228,7 @@ recursively_matching_data <- function(exp_df, list_of_phenos_, trait_names_, out
 
 #Let's get a path where the clusters are so that we can loop throught them:
 
-path_2_input <- "your_path"
+path_2_input <- "N:/SUN-CBMR-Kilpelainen-Group/Mario_Tools/PCOS_2026/"
 
 setwd(path_2_input)
 
@@ -309,6 +309,7 @@ pcos_ss <- fread("output/1_curated_data/pcos_finngen_curated.txt")
 pcos_broad_ss <- fread("output/1_curated_data/pcos_finngen_broad_curated.txt")
 pcos_consortium_ss <- fread("output/1_curated_data/pcos_finngen_consortium_curated.txt")
 pcos_day <- fread("output/1_curated_data/pcos_day_curated.txt")
+pcos_venkatesh = fread("output/1_curated_data/pcos_venkatesh_curated.txt")
 pcos_adj_age <- fread("output/1_curated_data/pcos_adj_age_curated.txt")
 pcos_adj_age_bmi <- fread("output/1_curated_data/pcosadjbmi_curated.txt")
 
@@ -321,6 +322,7 @@ pcos_broad_ss$prevalence<- as.numeric(pcos_broad_ss$prevalence)/100
 pcos_consortium_ss$prevalence<- as.numeric(pcos_consortium_ss$prevalence)/100
 
 pcos_day$prevalence<- as.numeric(pcos_day$prevalence)/100
+pcos_venkatesh$prevalence<- as.numeric(pcos_venkatesh$prevalence)/100
 pcos_adj_age$prevalence<- as.numeric(pcos_adj_age$prevalence)/100
 pcos_adj_age_bmi$prevalence<- as.numeric(pcos_adj_age_bmi$prevalence)/100
 
@@ -330,14 +332,14 @@ pcos_adj_age_bmi$prevalence<- as.numeric(pcos_adj_age_bmi$prevalence)/100
 
 list_of_phenos <- list(pcos_ss,
                        pcos_broad_ss,
-                       pcos_consortium_ss, pcos_day, pcos_adj_age, pcos_adj_age_bmi)
+                       pcos_consortium_ss, pcos_day, pcos_venkatesh, pcos_adj_age, pcos_adj_age_bmi)
 
 trait_names <- c("PCOS",
                  "PCOS (Broad)",
                  "PCOS (Consortium)",
-                 "PCOS (Day et al)", "PCOS (adj age)", "PCOS (adj age+BMI)")
+                 "PCOS (Day et al)", "PCOS (Venkatesh et al)", "PCOS (adj age)", "PCOS (adj age+BMI)")
 
-type_of_trait <- rep("PCOS", 6)
+type_of_trait <- rep("PCOS", 7)
 
 ########################################################
 #STEP 1: let's align the cluster to the positive allele#
